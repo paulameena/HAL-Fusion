@@ -1,12 +1,12 @@
-package HAL-Fusion;
+package FusionModels;
 
-import HAL-master.HAL.GridsAndAgents.AgentSQ2Dunstackable;
-import HAL-master.HAL.Gui.GridWindow;
-import HAL-master.HAL.GridsAndAgents.AgentGrid2D;
-import HAL-master.HAL.Rand;
-import HAL-master.HAL.Util;
+import HAL.GridsAndAgents.AgentSQ2Dunstackable;
+import HAL.Gui.GridWindow;
+import HAL.GridsAndAgents.AgentGrid2D;
+import HAL.Rand;
+import HAL.Util;
 
-import static HAL-master.HAL.Util.*;
+import static HAL.Util.*;
 
 /**
  * Created by Rafael on 9/5/2017.
