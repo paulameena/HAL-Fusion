@@ -26,13 +26,20 @@ class Cell extends AgentSQ2Dunstackable<SimpleFusion> {
             return;
         }
         if (G.rn.Double() < this.FUSE_PROB) {
-
+            Fuse();
         }
         if (G.rn.Double() < this.BIRTH_PROB) {
             int nOptions = G.MapEmptyHood(G.mooreHood, Xsq(), Ysq());
             if(nOptions>0) {
                 G.NewAgentSQ(G.mooreHood[G.rn.Int(nOptions)]).color=color;
             }
+        }
+    }
+
+    private void Fuse() {
+        int nOptions = G.MapOccupiedHood(G.mooreHood, Xsq(), Ysq());
+        if(nOptions >0) {
+            Cell fuse_partner = G.GetAgent(G.rn.Int(nOptions));
         }
     }
 }
