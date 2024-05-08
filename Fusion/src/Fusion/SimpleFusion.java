@@ -1,4 +1,4 @@
-package FusionModels;
+package Fusion;
 
 import HAL.GridsAndAgents.AgentSQ2Dunstackable;
 import HAL.Gui.GridWindow;
@@ -9,18 +9,26 @@ import HAL.Util;
 import static HAL.Util.*;
 
 /**
- * Created by Rafael on 9/5/2017.
+ * Created by Paulameena 5/8/2024, adapted from HAL documentation
  */
 
-class Cell extends AgentSQ2Dunstackable<BirthDeath> {
+class Cell extends AgentSQ2Dunstackable<SimpleFusion> {
     int color;
+    String cell_type; // parental, resistant, or fused
+    double DEATH_PROB;
+    double BIRTH_PROB;
+    double FUSE_PROB;
+    //int[] genotype;
 
     public void Step() {
-        if (G.rn.Double() < G.DEATH_PROB) {
+        if (G.rn.Double() < this.DEATH_PROB) {
             Dispose();
             return;
         }
-        if (G.rn.Double() < G.BIRTH_PROB) {
+        if (G.rn.Double() < this.FUSE_PROB) {
+
+        }
+        if (G.rn.Double() < this.BIRTH_PROB) {
             int nOptions = G.MapEmptyHood(G.mooreHood, Xsq(), Ysq());
             if(nOptions>0) {
                 G.NewAgentSQ(G.mooreHood[G.rn.Int(nOptions)]).color=color;
@@ -29,19 +37,17 @@ class Cell extends AgentSQ2Dunstackable<BirthDeath> {
     }
 }
 
-public class BirthDeath extends AgentGrid2D<Cell> {
-    int BLACK=RGB(0,0,0);
-    double DEATH_PROB=0.01;
-    double BIRTH_PROB=0.2;
+public class SimpleFusion extends AgentGrid2D<Cell> {
+    int BLACK= Util.RGB(0,0,0);
     Rand rn=new Rand();
-    int[]mooreHood=MooreHood(false);
+    int[]mooreHood= Util.MooreHood(false);
     int color;
-    public BirthDeath(int x, int y,int color) {
+    public SimpleFusion(int x, int y,int color) {
         super(x, y, Cell.class);
         this.color=color;
     }
     public void Setup(double rad){
-        int[]coords= CircleHood(true,rad);
+        int[]coords= Util.CircleHood(true,rad);
         int nCoords= MapHood(coords,xDim/2,yDim/2);
         for (int i = 0; i < nCoords ; i++) {
             NewAgentSQ(coords[i]).color=color;
@@ -63,7 +69,7 @@ public class BirthDeath extends AgentGrid2D<Cell> {
 
 
     public static void main(String[] args) {
-        BirthDeath t=new BirthDeath(100,100, Util.RED);
+        SimpleFusion t=new SimpleFusion(100,100, Util.RED);
         GridWindow win=new GridWindow(100,100,10);
         t.Setup(10);
         for (int i = 0; i < 100000; i++) {
