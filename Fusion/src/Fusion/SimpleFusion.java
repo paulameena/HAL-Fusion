@@ -7,6 +7,7 @@ import HAL.Rand;
 import HAL.Tools.FileIO;
 import HAL.Util;
 
+import javax.xml.stream.events.EndDocument;
 import java.util.Collections;
 import java.util.Date;
 import java.util.Dictionary;
@@ -91,10 +92,16 @@ class Cell extends AgentSQ2Dunstackable<SimpleFusion> {
             int nOptions = G.MapEmptyHood(G.mooreHood, Xsq(), Ysq());
             if(nOptions>0) {
                 Cell child = G.NewAgentSQ(G.mooreHood[G.rn.Int(nOptions)]);
+//                System.out.print(child.FUSE_PROB);
+//                System.out.print(child.BIRTH_PROB);
+//                System.out.print(child.DEATH_PROB + "\n");
                 child.color=this.color;
                 child.cell_type = this.cell_type;
                 child.UpdateCellCounts(true);
                 child.UpdateColorCounts(true);
+                child.FUSE_PROB = G.FUSE_PROB;
+                child.BIRTH_PROB = G.BIRTH_PROB;
+                child.DEATH_PROB = G.DEATH_PROB; //once divides it's allowed to fuse again/reset to starting values? not sure what it was set to before I manually encoded it here
                 //TODO: once genetic information is encoded, will need to allow for parasexual-style genetic mixing in the children if cell type is fused :0
             }
         }
@@ -103,6 +110,7 @@ class Cell extends AgentSQ2Dunstackable<SimpleFusion> {
     private void Fuse() {
         int nOptions = G.MapOccupiedHood(G.mooreHood, Xsq(), Ysq());
         String partner_type = null;
+        int partner_color= 0;
         Cell fuse_partner = null;
         for (int i = 0; i < nOptions; i++) {
             if (partner_type != null) { //stop once we have a fusion partner
@@ -112,19 +120,20 @@ class Cell extends AgentSQ2Dunstackable<SimpleFusion> {
             String test = fuse_partner.cell_type;
             if ((test.equals("parental")) | (test.equals("resistant"))) { //only allowed to merge if the neighbor is also not a fused cell //TODO: change to allow for multiple fusions
                 partner_type = test;
+                partner_color = fuse_partner.color;
             }
         }
         if (partner_type != null) {
             fuse_partner.Dispose();
-            if ((!this.cell_type.equals(partner_type))) {
+            if ((this.color + partner_color) == (RED + GREEN)) {
                 UpdateColorCounts(false);
-                this.color = Util.YELLOW;
+                this.color = Util.YELLOW; //fixed bug should only be yellow if two together are red and green to start
                 UpdateColorCounts(true);
             }
             UpdateCellCounts(false);
             this.cell_type = "fused";
             UpdateCellCounts(true);
-            this.FUSE_PROB = 0; //ONCE FUSED, NO MORE FUSION allowed (for now //TODO change later)
+            this.FUSE_PROB = 0; //ONCE FUSED, NO MORE FUSION allowed until divide (for now //TODO change later)
             //TODO: change color only if parental is merging with resistant, but cell_type label should change regardless
             }
         }
@@ -144,7 +153,7 @@ public class SimpleFusion extends AgentGrid2D<Cell> {
     int BLACK= Util.RGB(0,0,0);
     double DEATH_PROB = 0.01;
     double BIRTH_PROB = 0.2;
-    double FUSE_PROB = 0.0001;
+    double FUSE_PROB = 0.001;
     Rand rn=new Rand();
     int[]mooreHood= Util.MooreHood(false);
 
@@ -153,6 +162,7 @@ public class SimpleFusion extends AgentGrid2D<Cell> {
     String cellCountLogFileName;
     int logCellCountFrequency;
     int TIdx;
+    //double tStep;
 
 
     //int color;
@@ -164,7 +174,6 @@ public class SimpleFusion extends AgentGrid2D<Cell> {
         String filename = System.getProperty("user.dir") + "/logs/FusionModel_" + java.time.LocalDateTime.now() + ".csv";
         System.out.print(filename);
         InitialiseCellLog(filename);
-        WriteLogFileHeader();
         int[]coords= Util.CircleHood(true,rad);
         int nCoords= MapHood(coords,xDim/2,yDim/2);
         for (int i = 0; i < nCoords ; i++) {
@@ -194,7 +203,10 @@ public class SimpleFusion extends AgentGrid2D<Cell> {
         for (Cell c : this) {
             c.Step();
         }
-        SaveCurrentCellCount(TIdx);
+        if (TIdx % logCellCountFrequency == 0) {
+            SaveCurrentCellCount(TIdx);
+            //System.out.print(TIdx + "\n");
+        }
         CleanAgents();
         ShuffleAgents(rn);
     }
@@ -213,13 +225,16 @@ public class SimpleFusion extends AgentGrid2D<Cell> {
     public static void main(String[] args) {
         SimpleFusion t=new SimpleFusion(100,100);
         GridWindow win=new GridWindow(100,100,10);
+//        win.ToGIF("logs/test.jpg");
         t.Setup(10);
-        for (int i = 0; i < 100000; i++) {
+        win.TickPause(5000);
+        for (int i = 0; i < 10000; i++) {
             t.TIdx =i;
             win.TickPause(10);
             t.Step();
             t.Draw(win);
         }
+       win.Close();
         //TODO: figure out how to store info/summary statistics about model over time with each time step in a space-aware way
     }
 
@@ -233,14 +248,14 @@ public class SimpleFusion extends AgentGrid2D<Cell> {
         cellCountLogFile = new FileIO(cellCountLogFileName, "w");
         WriteLogFileHeader();
         this.cellCountLogFileName = cellCountLogFileName;
-        this.logCellCountFrequency = 1;
+        this.logCellCountFrequency = 10;
     }
 
     private void WriteLogFileHeader() {
         // cellCountLogFile.Write("TIdx,Time,NCells_S,NCells_R,NCells,DrugConcentration,rS,rR,mS,mR,dS,dR,dD_div_S,dD_div_R,dt");
 
         // cellCountLogFile.Write("TIdx,Time,NCells_S,NCells_R,NCells");
-        cellCountLogFile.Write("TIdx,Pop,n_fused,n_parental,n_resistant,n_yellow, n_green, n_red, fuseProb, dieProb, birthProb,");
+        cellCountLogFile.Write("TIdx,Pop,n_fused,n_parental,n_resistant,n_yellow,n_green,n_red, fuseProb, dieProb, birthProb,");
 
         cellCountLogFile.Write("\n");
     }
