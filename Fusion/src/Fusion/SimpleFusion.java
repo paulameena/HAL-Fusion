@@ -1,6 +1,7 @@
 package Fusion;
 
 import HAL.GridsAndAgents.AgentSQ2Dunstackable;
+import HAL.Gui.GifMaker;
 import HAL.Gui.GridWindow;
 import HAL.GridsAndAgents.AgentGrid2D;
 import HAL.Rand;
@@ -80,15 +81,16 @@ class Cell extends AgentSQ2Dunstackable<SimpleFusion> {
     }
 
     public void Step() {
-        if (G.rn.Double() < this.DEATH_PROB) {
+        double random = G.rn.Double();
+        if (random < this.DEATH_PROB) {
             Dispose();
             return;
         }
-        if (G.rn.Double() < this.FUSE_PROB) {
+        else if (random < this.FUSE_PROB + this.DEATH_PROB) {
             Fuse();
             return;
         }
-        if (G.rn.Double() < this.BIRTH_PROB) {
+        else if (random < this.BIRTH_PROB + this.FUSE_PROB + this.DEATH_PROB) {
             int nOptions = G.MapEmptyHood(G.mooreHood, Xsq(), Ysq());
             if(nOptions>0) {
                 Cell child = G.NewAgentSQ(G.mooreHood[G.rn.Int(nOptions)]);
@@ -104,6 +106,10 @@ class Cell extends AgentSQ2Dunstackable<SimpleFusion> {
                 child.DEATH_PROB = G.DEATH_PROB; //once divides it's allowed to fuse again/reset to starting values? not sure what it was set to before I manually encoded it here
                 //TODO: once genetic information is encoded, will need to allow for parasexual-style genetic mixing in the children if cell type is fused :0
             }
+            return;
+        }
+        else {
+            return;
         }
     }
 
@@ -225,16 +231,20 @@ public class SimpleFusion extends AgentGrid2D<Cell> {
     public static void main(String[] args) {
         SimpleFusion t=new SimpleFusion(100,100);
         GridWindow win=new GridWindow(100,100,10);
-//        win.ToGIF("logs/test.jpg");
+        GifMaker gm=new GifMaker("test.gif",0,true);
         t.Setup(10);
         win.TickPause(5000);
         for (int i = 0; i < 10000; i++) {
-            t.TIdx =i;
+            t.TIdx = i;
             win.TickPause(10);
             t.Step();
             t.Draw(win);
+            if (i % 10 == 0) {
+                gm.AddFrame(win);
+            }
         }
-       win.Close();
+        gm.Close();
+        win.Close();
         //TODO: figure out how to store info/summary statistics about model over time with each time step in a space-aware way
     }
 
