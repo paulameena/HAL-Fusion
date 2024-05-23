@@ -53,13 +53,13 @@ class Cell extends AgentSQ2Dunstackable<SimpleFusion> {
     }
 
     public void UpdateColorCounts(boolean function) { //function: False if remove, True if add
-        if (color == GREEN) {
+        if (color == G.GREEN) {
             if (!function) {
                 G.green_count--;
             } else {
                 G.green_count++;
             }
-        } else if (color == RED) {
+        } else if (color == G.RED) {
             if (!function) {
                 G.red_count--;
             } else {
@@ -131,9 +131,9 @@ class Cell extends AgentSQ2Dunstackable<SimpleFusion> {
         }
         if (partner_type != null) {
             fuse_partner.Dispose();
-            if ((this.color + partner_color) == (RED + GREEN)) {
+            if ((this.color + partner_color) == (G.RED + G.GREEN)) {
                 UpdateColorCounts(false);
-                this.color = Util.YELLOW; //fixed bug should only be yellow if two together are red and green to start
+                this.color = G.YELLOW; //fixed bug should only be yellow if two together are red and green to start
                 UpdateColorCounts(true);
             }
             UpdateCellCounts(false);
@@ -157,6 +157,9 @@ public class SimpleFusion extends AgentGrid2D<Cell> {
 
     //model params
     int BLACK= Util.RGB(0,0,0);
+    int RED = Util.RGB256(144, 30, 6);
+    int GREEN = Util.RGB256(22,177,25);
+    int YELLOW = Util.RGB256(243, 234, 5);
     double DEATH_PROB = 0.01;
     double BIRTH_PROB = 0.2;
     double FUSE_PROB = 0.001;
@@ -176,9 +179,12 @@ public class SimpleFusion extends AgentGrid2D<Cell> {
         super(x, y, Cell.class);
         //this.color=color;
     }
+    /* Setup/Initialising method for a central circle/sphere with 50% resistant and 50% parental cells on average.
+    * Useful for modeling tumors but not reflective of the experiments we've done in vitro.
+    * */
     public void Setup(double rad){
         String filename = System.getProperty("user.dir") + "/logs/FusionModel_" + java.time.LocalDateTime.now() + ".csv";
-        System.out.print(filename);
+        //System.out.print(filename);
         InitialiseCellLog(filename);
         int[]coords= Util.CircleHood(true,rad);
         int nCoords= MapHood(coords,xDim/2,yDim/2);
@@ -190,13 +196,45 @@ public class SimpleFusion extends AgentGrid2D<Cell> {
             new_cell.BIRTH_PROB = BIRTH_PROB;
             new_cell.DEATH_PROB = DEATH_PROB;
             if (rn.Double() <= 0.5) {
-                new_cell.color=Util.RED;
+                new_cell.color=RED;
                 red_count++;
                 new_cell.cell_type = "resistant";
                 resistant_cell_count++;
             }
             else {
-                new_cell.color = Util.GREEN;
+                new_cell.color = GREEN;
+                green_count++;
+                new_cell.cell_type = "parental";
+                parental_cell_count++;
+            }
+        }
+
+    }
+    /* Jake requested I initialise a bit differently, in a way that is more reflective of our in vitro experiments.
+    Idea: 200-300 cells scattered over window /"plate" where half are parental and half are resistant, but seeding is mixed/fairly random.
+    * */
+
+    public void Setup(int start_pop_size){
+        String filename = System.getProperty("user.dir") + "/logs/FusionModel_" + java.time.LocalDateTime.now() + ".csv";
+        //System.out.print(filename);
+        InitialiseCellLog(filename);
+        int[]coords= Util.RectangleHood(true, xDim/2, yDim/2);
+        int nCoords= MapHood(coords,xDim/2,yDim/2);
+        for (int i = 0; i < start_pop_size ; i++) {
+            Cell new_cell = NewAgentSQ(coords[rn.Int(nCoords)]);
+            nCoords = MapEmptyHood(coords,xDim/2,yDim/2);
+            //assign parameters
+            new_cell.FUSE_PROB = FUSE_PROB;
+            new_cell.BIRTH_PROB = BIRTH_PROB;
+            new_cell.DEATH_PROB = DEATH_PROB;
+            if (i % 2 == 0) {
+                new_cell.color=RED;
+                red_count++;
+                new_cell.cell_type = "resistant";
+                resistant_cell_count++;
+            }
+            else {
+                new_cell.color = GREEN;
                 green_count++;
                 new_cell.cell_type = "parental";
                 parental_cell_count++;
@@ -224,16 +262,16 @@ public class SimpleFusion extends AgentGrid2D<Cell> {
         }
     }
 
-    public void WriteToOutput() {
-
-    }
+//    public void WriteToOutput() {
+//
+//    }
 
     public static void main(String[] args) {
         SimpleFusion t=new SimpleFusion(100,100);
         GridWindow win=new GridWindow(100,100,10);
         GifMaker gm=new GifMaker("test.gif",0,true);
-        t.Setup(10);
-        win.TickPause(5000);
+        t.Setup(200);
+        //win.TickPause(10000);
         for (int i = 0; i < 10000; i++) {
             t.TIdx = i;
             win.TickPause(10);
