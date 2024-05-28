@@ -1,25 +1,21 @@
 package Fusion;
 
 import HAL.GridsAndAgents.AgentSQ2Dunstackable;
-import HAL.Gui.GifMaker;
 import HAL.Gui.GridWindow;
 import HAL.GridsAndAgents.AgentGrid2D;
 import HAL.Rand;
 import HAL.Tools.FileIO;
 import HAL.Util;
 
-import javax.xml.stream.events.EndDocument;
-import java.util.Collections;
-import java.util.Date;
-import java.util.Dictionary;
-import java.util.List;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
-
-import static HAL.Util.*;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.util.Arrays;
 
 /**
  * Created by Paulameena 5/8/2024, adapted from HAL documentation
+ *
+ * Last Update: 5/24/2024
  */
 
 class Cell extends AgentSQ2Dunstackable<SimpleFusion> {
@@ -167,9 +163,9 @@ public class SimpleFusion extends AgentGrid2D<Cell> {
     int[]mooreHood= Util.MooreHood(false);
 
     //IO params
-    FileIO cellCountLogFile;
+    PrintWriter cellCountLogFile;
     String cellCountLogFileName;
-    int logCellCountFrequency;
+    int logCellCountFrequency = 10;
     int TIdx;
     //double tStep;
 
@@ -182,7 +178,7 @@ public class SimpleFusion extends AgentGrid2D<Cell> {
     /* Setup/Initialising method for a central circle/sphere with 50% resistant and 50% parental cells on average.
     * Useful for modeling tumors but not reflective of the experiments we've done in vitro.
     * */
-    public void Setup(double rad){
+    public void Setup(double rad) throws IOException {
         String filename = System.getProperty("user.dir") + "/logs/FusionModel_" + java.time.LocalDateTime.now() + ".csv";
         //System.out.print(filename);
         InitialiseCellLog(filename);
@@ -214,8 +210,8 @@ public class SimpleFusion extends AgentGrid2D<Cell> {
     Idea: 200-300 cells scattered over window /"plate" where half are parental and half are resistant, but seeding is mixed/fairly random.
     * */
 
-    public void Setup(int start_pop_size){
-        String filename = System.getProperty("user.dir") + "/logs/FusionModel_" + java.time.LocalDateTime.now() + ".csv";
+    public void Setup(int start_pop_size) throws IOException {
+        String filename = System.getProperty("user.dir") + "/logs/May28_2024_Pf10-3/FusionModel_" + java.time.LocalDateTime.now() + ".csv";
         //System.out.print(filename);
         InitialiseCellLog(filename);
         int[]coords= Util.RectangleHood(true, xDim/2, yDim/2);
@@ -243,12 +239,18 @@ public class SimpleFusion extends AgentGrid2D<Cell> {
 
     }
 
-    public void Step() {
+    public void Step() throws Exception{
         for (Cell c : this) {
             c.Step();
         }
-        if (TIdx % logCellCountFrequency == 0) {
-            SaveCurrentCellCount(TIdx);
+        if (TIdx % (int) logCellCountFrequency == 0) {
+            boolean saved = SaveCurrentCellCount(TIdx);
+            if (TIdx == 10000) {
+                this.cellCountLogFile.close();
+            }
+            if (!saved) {
+                throw new Exception("cell count was not saved!");
+            }
             //System.out.print(TIdx + "\n");
         }
         CleanAgents();
@@ -266,23 +268,30 @@ public class SimpleFusion extends AgentGrid2D<Cell> {
 //
 //    }
 
-    public static void main(String[] args) {
-        SimpleFusion t=new SimpleFusion(100,100);
-        GridWindow win=new GridWindow(100,100,10);
-        GifMaker gm=new GifMaker("test.gif",0,true);
-        t.Setup(200);
-        //win.TickPause(10000);
-        for (int i = 0; i < 10000; i++) {
-            t.TIdx = i;
-            win.TickPause(10);
-            t.Step();
-            t.Draw(win);
-            if (i % 10 == 0) {
-                gm.AddFrame(win);
+    public static void main(String[] args) throws IOException {
+        for (int i = 0; i< 10; i++) {
+            SimpleFusion t = new SimpleFusion(100, 100);
+            //GridWindow win=new GridWindow(100,100,10);
+//        GifMaker gm=new GifMaker("test.gif",0,true);
+            t.Setup(200);
+            //win.TickPause(10000);
+            for (int j = 0; j < 10000; j++) {
+                t.TIdx = j;
+                //win.TickPause(10);
+                try {
+                    t.Step();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+                //t.Draw(win);
+//            if (i % 10 == 0) {
+//                gm.AddFrame(win);
+//            }
             }
         }
-        gm.Close();
-        win.Close();
+
+        //gm.Close();
+        //win.Close();
         //TODO: figure out how to store info/summary statistics about model over time with each time step in a space-aware way
     }
 
@@ -292,8 +301,8 @@ public class SimpleFusion extends AgentGrid2D<Cell> {
     // Credits: Following code taken and modified from github.com/eshanking/HAL_Dose_Response
     // ------------------------------------------------------------------------------------------------------------
 
-    public void InitialiseCellLog(String cellCountLogFileName) {
-        cellCountLogFile = new FileIO(cellCountLogFileName, "w");
+    public void InitialiseCellLog(String cellCountLogFileName) throws IOException {
+        cellCountLogFile =  new PrintWriter(new FileWriter(cellCountLogFileName), true);
         WriteLogFileHeader();
         this.cellCountLogFileName = cellCountLogFileName;
         this.logCellCountFrequency = 10;
@@ -303,9 +312,8 @@ public class SimpleFusion extends AgentGrid2D<Cell> {
         // cellCountLogFile.Write("TIdx,Time,NCells_S,NCells_R,NCells,DrugConcentration,rS,rR,mS,mR,dS,dR,dD_div_S,dD_div_R,dt");
 
         // cellCountLogFile.Write("TIdx,Time,NCells_S,NCells_R,NCells");
-        cellCountLogFile.Write("TIdx,Pop,n_fused,n_parental,n_resistant,n_yellow,n_green,n_red, fuseProb, dieProb, birthProb,");
-
-        cellCountLogFile.Write("\n");
+        cellCountLogFile.println("TIdx,Pop,n_fused,n_parental,n_resistant,n_yellow,n_green,n_red, fuseProb, dieProb, birthProb\n");
+        //cellCountLogFile.Close();
     }
 //    public void Close() {
 //        this.cellCountLogFile.Close();
@@ -314,8 +322,10 @@ public class SimpleFusion extends AgentGrid2D<Cell> {
     public boolean SaveCurrentCellCount(int currTimeIdx) {
         boolean successfulLog = false;
         if ((currTimeIdx % (int) (logCellCountFrequency)) == 0 && logCellCountFrequency > 0) {
-            cellCountLogFile.WriteDelimit(GetModelState(),",");
-            cellCountLogFile.Write("\n");
+            String test = Arrays.toString(GetModelState()).replace("[", "")  //remove the right bracket
+                    .replace("]", "");
+            cellCountLogFile.println(test);
+//            cellCountLogFile.Write("\n");
             successfulLog = true;
         }
         return successfulLog;
