@@ -1,0 +1,4 @@
+TIdx,Pop,n_fused,n_parental,n_resistant,n_yellow,n_green,n_red, fuseProb, dieProb, birthProb
+
+0.0, 243.0, 0.0, 123.0, 120.0, 0.0, 123.0, 120.0, 0.001, 0.01, 0.2
+10.0, 1349.0, 16.0, 666.0, 667.0, 0.0, 673.0, 676.0, 0.001, 0.01, 0.2

@@ -1,6 +1,7 @@
 package Fusion;
 
 import HAL.GridsAndAgents.AgentSQ2Dunstackable;
+import HAL.Gui.GifMaker;
 import HAL.Gui.GridWindow;
 import HAL.GridsAndAgents.AgentGrid2D;
 import HAL.Rand;
@@ -158,14 +159,14 @@ public class SimpleFusion extends AgentGrid2D<Cell> {
     int YELLOW = Util.RGB256(243, 234, 5);
     double DEATH_PROB = 0.01;
     double BIRTH_PROB = 0.2;
-    double FUSE_PROB = 0.001;
+    double FUSE_PROB = 0.00001;
     Rand rn=new Rand();
     int[]mooreHood= Util.MooreHood(false);
 
     //IO params
     PrintWriter cellCountLogFile;
     String cellCountLogFileName;
-    int logCellCountFrequency = 10;
+    //int logCellCountFrequency = 10;
     int TIdx;
     //double tStep;
 
@@ -211,7 +212,7 @@ public class SimpleFusion extends AgentGrid2D<Cell> {
     * */
 
     public void Setup(int start_pop_size) throws IOException {
-        String filename = System.getProperty("user.dir") + "/logs/May28_2024_Pf10-3/FusionModel_" + java.time.LocalDateTime.now() + ".csv";
+        String filename = System.getProperty("user.dir") + "/logs/Dec18_24_10-5/" + java.time.LocalDateTime.now() + ".csv";
         //System.out.print(filename);
         InitialiseCellLog(filename);
         int[]coords= Util.RectangleHood(true, xDim/2, yDim/2);
@@ -243,16 +244,16 @@ public class SimpleFusion extends AgentGrid2D<Cell> {
         for (Cell c : this) {
             c.Step();
         }
-        if (TIdx % (int) logCellCountFrequency == 0) {
-            boolean saved = SaveCurrentCellCount(TIdx);
-            if (TIdx == 10000) {
-                this.cellCountLogFile.close();
-            }
-            if (!saved) {
-                throw new Exception("cell count was not saved!");
-            }
+       // if (TIdx % (int) logCellCountFrequency == 0) {
+            //boolean saved = SaveCurrentCellCount(TIdx);
+////if (TIdx == 10000) {
+//                this.cellCountLogFile.close();
+//            }
+//            if (!saved) {
+//                throw new Exception("cell count was not saved!");
+//            }
             //System.out.print(TIdx + "\n");
-        }
+        //}
         CleanAgents();
         ShuffleAgents(rn);
     }
@@ -269,13 +270,65 @@ public class SimpleFusion extends AgentGrid2D<Cell> {
 //    }
 
     public static void main(String[] args) throws IOException {
-        for (int i = 0; i< 10; i++) {
+        int trace = args.length > 0 ? Integer.parseInt(args[0]) : 0; // 0 == false; else interval for tracing
+        boolean draw = args.length > 1 && args[1].equalsIgnoreCase("TRUE");
+        int sims = args.length > 2 ? Integer.parseInt(args[2]) : 1;;
+        int time_steps = args.length > 3 ? Integer.parseInt(args[3]) : 10000;
+
+        if (trace > 0) {
+            methodForTraceTrue(trace, draw, sims, time_steps);
+        } else {
+            methodForTraceFalse(draw, sims, time_steps);
+        }
+    }
+
+    private static void methodForTraceTrue(int trace, boolean draw_bool, int number_sims, int steps) throws IOException {
+        for (int i = 0; i< number_sims; i++) {
+            System.out.println("starting new simulation");
+            System.out.println(trace);
+            System.out.println(number_sims);
             SimpleFusion t = new SimpleFusion(100, 100);
-            //GridWindow win=new GridWindow(100,100,10);
-//        GifMaker gm=new GifMaker("test.gif",0,true);
+            GridWindow win=new GridWindow(100,100,10);
+            //GifMaker gm =new GifMaker("test3.gif",0,true);
+            t.Setup(200);
+            t.WriteLogFileHeader();
+            for (int j = 0; j < steps; j++) {
+                t.TIdx = j;
+                //win.TickPause(10);
+                try {
+                    t.Step();
+                    if (j%trace == 0) {
+                        t.SaveCurrentCellCount(t.TIdx);
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+                if (draw_bool & (j % 20 == 0)) {
+                t.Draw(win);
+                //gm.AddFrame(win);
+                }
+
+//                if (j == 0 | j == 10 || j == 30) {
+//                    win.TickPause(10000);
+//                }
+
+            }
+            System.out.println("ending last simulation");
+            t.cellCountLogFile.flush();
+            t.cellCountLogFile.close();
+            //gm.Close();
+            //win.Close();
+        }
+    }
+
+    private static void methodForTraceFalse(boolean draw_bool, int number_sims, int steps) throws IOException {
+        for (int i = 0; i< number_sims; i++) {
+            SimpleFusion t = new SimpleFusion(100, 100);
+            GridWindow win=new GridWindow(100,100,10);
+            GifMaker gm =new GifMaker("test3.gif",0,true);
             t.Setup(200);
             //win.TickPause(10000);
-            for (int j = 0; j < 10000; j++) {
+            for (int j = 0; j < steps; j++) {
                 t.TIdx = j;
                 //win.TickPause(10);
                 try {
@@ -283,11 +336,17 @@ public class SimpleFusion extends AgentGrid2D<Cell> {
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
-                //t.Draw(win);
-//            if (i % 10 == 0) {
-//                gm.AddFrame(win);
-//            }
+                if (draw_bool & j % 20 == 0) {
+                    t.Draw(win);
+                    gm.AddFrame(win);
+                    }
+//                if (j == 0 | j == 10 || j == 30) {
+//                    win.TickPause(10000);
+//                }
+
             }
+            gm.Close();
+            win.Close();
         }
 
         //gm.Close();
@@ -305,7 +364,7 @@ public class SimpleFusion extends AgentGrid2D<Cell> {
         cellCountLogFile =  new PrintWriter(new FileWriter(cellCountLogFileName), true);
         WriteLogFileHeader();
         this.cellCountLogFileName = cellCountLogFileName;
-        this.logCellCountFrequency = 10;
+        //this.logCellCountFrequency = 10;
     }
 
     private void WriteLogFileHeader() {
@@ -321,13 +380,12 @@ public class SimpleFusion extends AgentGrid2D<Cell> {
 
     public boolean SaveCurrentCellCount(int currTimeIdx) {
         boolean successfulLog = false;
-        if ((currTimeIdx % (int) (logCellCountFrequency)) == 0 && logCellCountFrequency > 0) {
-            String test = Arrays.toString(GetModelState()).replace("[", "")  //remove the right bracket
+        String test = Arrays.toString(GetModelState()).replace("[", "")  //remove the right bracket
                     .replace("]", "");
             cellCountLogFile.println(test);
 //            cellCountLogFile.Write("\n");
             successfulLog = true;
-        }
+
         return successfulLog;
     }
 
